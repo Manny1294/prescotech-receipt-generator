@@ -95,10 +95,10 @@
           </div>
           <div class="form-group">
             <label>Payment Status *</label>
-            <select v-model="formData.paymentStatus" required>
-              <option value="Paid">Paid</option>
-              <option value="Partial">Partial Payment</option>
-            </select>
+            <!-- <select v-model="formData.paymentStatus" required> -->
+            <option value="Paid">Paid</option>
+            <!-- <option value="Partial">Partial Payment</option> -->
+            <!-- </select> -->
           </div>
         </div>
       </div>
@@ -108,10 +108,10 @@
           <span>Subtotal:</span>
           <span>{{ formatCurrency(calculateSubtotal()) }}</span>
         </div>
-        <!-- <div class="total-row">
+        <div class="total-row">
           <span>Tax:</span>
-          <span>₦100</span>
-        </div> -->
+          <span>₦0</span>
+        </div>
         <div class="total-row grand-total">
           <span>Amount Paid:</span>
           <span>{{ formatCurrency(calculateSubtotal()) }}</span>

@@ -91,6 +91,8 @@
               <option value="Cash">Cash</option>
               <option value="Bank Transfer">Bank Transfer</option>
               <option value="POS">POS</option>
+
+              <option value="USSD">USSD</option>
             </select>
           </div>
           <div class="form-group">
@@ -108,10 +110,10 @@
           <span>Subtotal:</span>
           <span>{{ formatCurrency(calculateSubtotal()) }}</span>
         </div>
-        <!-- <div class="total-row">
+        <div class="total-row">
           <span>Tax:</span>
-          <span>₦100</span>
-        </div> -->
+          <span>₦0</span>
+        </div>
         <div class="total-row grand-total">
           <span>Amount Paid:</span>
           <span>{{ formatCurrency(calculateSubtotal()) }}</span>

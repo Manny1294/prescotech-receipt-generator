@@ -108,10 +108,10 @@
           <span>Subtotal:</span>
           <span>{{ formatCurrency(calculateSubtotal()) }}</span>
         </div>
-        <!-- <div class="total-row">
+        <div class="total-row">
           <span>Tax:</span>
           <span>₦100</span>
-        </div> -->
+        </div>
         <div class="total-row grand-total">
           <span>Amount Paid:</span>
           <span>{{ formatCurrency(calculateSubtotal()) }}</span>
