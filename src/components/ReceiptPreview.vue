@@ -4,108 +4,50 @@ import {
   Download as DownloadIcon,
   LocateFixedIcon as LocateIcon,
   PhoneCallIcon as PhoneCallIcon,
-  MailIcon as MailIcon,
 } from 'lucide-vue-next'
-import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import html2pdf from 'html2pdf.js'
+import { useReceiptStore } from '@/stores/receiptStore'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const props = defineProps({
   receipt: Object,
 })
 
-defineEmits(['back', 'save'])
+const receiptStore = useReceiptStore()
 
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-NG', {
+const formatDate = (dateString) =>
+  new Date(dateString).toLocaleDateString('en-NG', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   })
-}
 
-const formatCurrency = (amount) => {
-  return `₦${amount.toLocaleString('en-NG')}`
-}
+const formatCurrency = (amount) => `₦${amount.toLocaleString('en-NG')}`
 
+// 🧾 Download the receipt as PDF
 const downloadPDF = () => {
-  const doc = new jsPDF()
-
-  // Company Info
-  doc.setFontSize(20)
-  doc.setTextColor(102, 126, 234)
-  doc.text('CONPAY', 20, 20)
-
-  doc.setFontSize(10)
-  doc.setTextColor(0, 0, 0)
-  doc.text('123 Business Street', 20, 28)
-  doc.text('Lagos, Nigeria', 20, 33)
-  doc.text('Phone: +234 800 000 0000', 20, 38)
-  doc.text('Email: info@conpay.com', 20, 43)
-
-  // Receipt Details
-  doc.setFontSize(24)
-  doc.setTextColor(102, 126, 234)
-  doc.text('RECEIPT', 140, 20)
-
-  doc.setFontSize(10)
-  doc.setTextColor(0, 0, 0)
-  doc.text(`Receipt #: ${props.receipt.receiptNumber}`, 140, 28)
-  doc.text(`Date: ${formatDate(props.receipt.date)}`, 140, 33)
-  doc.text(`Payment: ${props.receipt.paymentStatus}`, 140, 38)
-
-  // Customer Info
-  doc.setFontSize(12)
-  doc.setFont(undefined, 'bold')
-  doc.text('Customer:', 20, 60)
-
-  doc.setFont(undefined, 'normal')
-  doc.setFontSize(10)
-  doc.text(props.receipt.customer.name, 20, 68)
-  doc.text(props.receipt.customer.address, 20, 73)
-  doc.text(props.receipt.customer.phone, 20, 78)
-  if (props.receipt.customer.email) {
-    doc.text(props.receipt.customer.email, 20, 83)
+  const element = document.getElementById('receipt-content')
+  const opt = {
+    margin: [0.2, 0.2, 0.2, 0.2],
+    filename: `${props.receipt.receiptNumber}.pdf`,
+    image: { type: 'jpeg', quality: 1 },
+    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
   }
+  html2pdf().set(opt).from(element).save()
+}
 
-  // Items Table
-  const tableData = props.receipt.items.map((item) => [
-    item.name,
-    item.quantity,
-    formatCurrency(item.price),
-    formatCurrency(item.quantity * item.price),
-  ])
-
-  doc.autoTable({
-    startY: 95,
-    head: [['Item', 'Quantity', 'Unit Price', 'Total']],
-    body: tableData,
-    theme: 'grid',
-    headStyles: { fillColor: [102, 126, 234] },
-  })
-
-  // Payment Info
-  const finalY = doc.lastAutoTable.finalY + 10
-  doc.setFont(undefined, 'bold')
-  doc.text('Payment Information:', 20, finalY)
-  doc.setFont(undefined, 'normal')
-  doc.text(`Method: ${props.receipt.paymentMethod}`, 20, finalY + 7)
-  doc.text(`Status: ${props.receipt.paymentStatus}`, 20, finalY + 14)
-
-  // Totals
-  doc.text(`Subtotal: ${formatCurrency(props.receipt.subtotal)}`, 140, finalY + 7)
-  doc.text(`Tax: ${formatCurrency(props.receipt.tax)}`, 140, finalY + 14)
-
-  doc.setFont(undefined, 'bold')
-  doc.setFontSize(12)
-  doc.text(`Amount Paid: ${formatCurrency(props.receipt.total)}`, 140, finalY + 22)
-
-  // Footer
-  doc.setFont(undefined, 'italic')
-  doc.setFontSize(10)
-  doc.text('Thank you for your purchase!', 105, finalY + 40, { align: 'center' })
-  doc.text('Please keep this receipt for your records.', 105, finalY + 46, { align: 'center' })
-
-  doc.save(`${props.receipt.receiptNumber}.pdf`)
+// 💾 Save receipt directly using localStorage
+const saveReceipt = async () => {
+  const success = await receiptStore.saveReceipt(props.receipt)
+  if (success) {
+    alert('✅ Receipt saved successfully!')
+    router.push('/')
+  } else {
+    alert('❌ Failed to save receipt. Please try again.')
+  }
 }
 </script>
 
@@ -121,10 +63,11 @@ const downloadPDF = () => {
           <DownloadIcon :size="20" />
           Download PDF
         </button>
-        <button @click="$emit('save')" class="btn-save">Save Receipt</button>
+        <button @click="saveReceipt" class="btn-save">Save Receipt</button>
       </div>
     </div>
 
+    <!-- Receipt Content -->
     <div id="receipt-content" class="receipt-preview">
       <div class="receipt-paper">
         <!-- Header -->
@@ -133,23 +76,21 @@ const downloadPDF = () => {
             <div class="logo-preview">
               <img src="/logo.png" alt="Presco Tech Logo" class="logo" />
             </div>
-            <h2>Presco Tech</h2>
             <div class="icon-info">
               <LocateIcon :size="15" class="icon" />
-              <p>No.5 Olayeni Street, Computer Village Ikeja, Lagos.</p>
+              <p class="add">
+                No.11 Somoye Osundairo Street <br />(Foramot Plaza) Computer Village, <br />Ikeja,
+                Lagos.
+              </p>
             </div>
-
             <div class="icon-info">
               <PhoneCallIcon :size="15" class="icon" />
               <p>+234 706 477 4220</p>
             </div>
-            <div class="icon-info">
-              <MailIcon :size="15" class="icon" />
-              <p>prescojackson@yahoo.com</p>
-            </div>
           </div>
+
           <div class="receipt-details">
-            <p>RC:7752778</p>
+            <p>BN:7700965</p>
             <h2>RECEIPT</h2>
             <p><strong>Receipt #:</strong> {{ receipt.receiptNumber }}</p>
             <p><strong>Date:</strong> {{ formatDate(receipt.date) }}</p>
@@ -189,14 +130,6 @@ const downloadPDF = () => {
           </tbody>
         </table>
 
-        <!-- Payment Info -->
-        <div class="payment-section">
-          <div class="payment-info">
-            <p><strong>Payment Method:</strong> {{ receipt.paymentMethod }}</p>
-            <p><strong>Payment Status:</strong> {{ receipt.paymentStatus }}</p>
-          </div>
-        </div>
-
         <!-- Totals -->
         <div class="totals-section">
           <div class="totals-grid">
@@ -219,8 +152,7 @@ const downloadPDF = () => {
         <div class="receipt-footer">
           <p class="footer-note">
             Please keep this receipt for your records. <br />
-            Goods sold in good condition are not returnable, and there is no refund of money after
-            payment.
+            Goods sold in good condition are not returnable.
           </p>
           <p>Thank you for your purchase!</p>
         </div>
