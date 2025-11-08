@@ -5,6 +5,7 @@ import {
   LocateFixedIcon as LocateIcon,
   PhoneCallIcon as PhoneCallIcon,
 } from 'lucide-vue-next'
+
 import html2pdf from 'html2pdf.js'
 import { useReceiptStore } from '@/stores/receiptStore'
 import { useRouter } from 'vue-router'
@@ -77,14 +78,14 @@ const saveReceipt = async () => {
               <img src="/logo.png" alt="Presco Tech Logo" class="logo" />
             </div>
             <div class="icon-info">
-              <LocateIcon :size="15" class="icon" />
+              <LocateIcon :size="10" class="icon" />
               <p class="add">
                 No.11 Somoye Osundairo Street <br />(Foramot Plaza) Computer Village, <br />Ikeja,
                 Lagos.
               </p>
             </div>
             <div class="icon-info">
-              <PhoneCallIcon :size="15" class="icon" />
+              <PhoneCallIcon :size="10" class="icon" />
               <p>+234 706 477 4220</p>
             </div>
           </div>
@@ -92,11 +93,11 @@ const saveReceipt = async () => {
           <div class="receipt-details">
             <p>BN:7700965</p>
             <h2>RECEIPT</h2>
-            <p><strong>Receipt #:</strong> {{ receipt.receiptNumber }}</p>
+            <p><strong>Receipt No.:</strong> {{ receipt.receiptNumber }}</p>
             <p><strong>Date:</strong> {{ formatDate(receipt.date) }}</p>
             <p>
               <strong>Payment:</strong>
-              <span class="payment-badge">{{ receipt.paymentStatus }}</span>
+              <span class="payment-badge"> {{ receipt.paymentStatus }}</span>
             </p>
           </div>
         </div>
@@ -150,10 +151,7 @@ const saveReceipt = async () => {
 
         <!-- Footer -->
         <div class="receipt-footer">
-          <p class="footer-note">
-            Please keep this receipt for your records. <br />
-            Goods sold in good condition are not returnable.
-          </p>
+          <p class="footer-note">Goods sold in good condition are not returnable.</p>
           <p>Thank you for your purchase!</p>
         </div>
       </div>
@@ -243,7 +241,7 @@ const saveReceipt = async () => {
   justify-content: space-between;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 3px solid #667eea;
+  border-bottom: 3px solid rgb(238, 236, 236);
 }
 
 .company-info {
@@ -285,7 +283,7 @@ const saveReceipt = async () => {
 .customer-section {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background: #f7fafc;
+  /* background: #f7fafc; */
   border-radius: 8px;
 }
 
@@ -306,8 +304,8 @@ const saveReceipt = async () => {
 }
 
 .items-table-preview thead {
-  background: #667eea;
-  color: white;
+  background: rgb(238, 236, 236);
+  color: rgb(28, 28, 26);
 }
 
 .items-table-preview th,
@@ -322,7 +320,7 @@ const saveReceipt = async () => {
 }
 
 .items-table-preview tbody tr:nth-child(even) {
-  background: #f7fafc;
+  background: black;
 }
 
 .items-table-preview td:nth-child(2),
@@ -355,12 +353,12 @@ const saveReceipt = async () => {
 }
 
 .grand-total-preview {
-  border-top: 2px solid #667eea;
+  border-top: 2px solid black;
   margin-top: 0.5rem;
   padding-top: 1rem;
   font-weight: 700;
   font-size: 1.3rem;
-  color: #667eea;
+  color: rgb(28, 28, 26);
 }
 
 .invoice-footer {
@@ -380,11 +378,13 @@ const saveReceipt = async () => {
 }
 .icon-info {
   display: flex;
-  align-items: center;
-
+  align-items: baseline;
   gap: 5px;
 }
 .icon {
   color: 000;
+}
+.payment-badge {
+  padding-left: 2px;
 }
 </style>
