@@ -1,6 +1,75 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import {
+  FileText as FileTextIcon,
+  Download as DownloadIcon,
+  Trash2 as Trash2Icon,
+  Eye as EyeIcon,
+} from 'lucide-vue-next'
+import { useReceiptStore } from '@/stores/receiptStore'
+import html2pdf from 'html2pdf.js'
+import { useRouter } from 'vue-router'
+import ReceiptTemplate from './ReceiptTemplate.vue'
+
+const router = useRouter()
+const receiptStore = useReceiptStore()
+const loading = ref(true)
+const downloadingReceipt = ref(null)
+
+onMounted(async () => {
+  await receiptStore.loadReceipts()
+  loading.value = false
+})
+
+const formatDate = (dateString) =>
+  new Date(dateString).toLocaleDateString('en-NG', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+
+const formatCurrency = (amount) => `₦${amount.toLocaleString('en-NG')}`
+
+const viewReceipt = (receipt) => {
+  receiptStore.currentReceipt = receipt
+  router.push({ path: '/create', query: { from: 'list' } })
+}
+
+// 🧾 Download receipt using html2pdf (same format as preview)
+const downloadReceipt = (receipt) => {
+  downloadingReceipt.value = receipt.receiptNumber
+
+  setTimeout(() => {
+    const element = document.getElementById(`receipt-${receipt.receiptNumber}`)
+    const opt = {
+      margin: [0.2, 0.2, 0.2, 0.2],
+      filename: `${receipt.customer.name} presco-tech.pdf`,
+      image: { type: 'jpeg', quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    }
+
+    html2pdf()
+      .set(opt)
+      .from(element)
+      .save()
+      .then(() => {
+        downloadingReceipt.value = null
+      })
+  }, 100)
+}
+
+const deleteReceipt = async (receiptNumber) => {
+  if (confirm(`Are you sure you want to delete receipt ${receiptNumber}?`)) {
+    await receiptStore.deleteReceipt(receiptNumber)
+  }
+}
+</script>
+
 <template>
   <div class="receipt-list-container">
-    <h2 style="text-align: center">Recent Receipts</h2>
+    <h2>Recent Receipts</h2>
 
     <div v-if="loading" class="loading">Loading receipts...</div>
 
@@ -28,8 +97,14 @@
         </div>
 
         <div class="receipt-card-actions">
-          <button @click="viewReceipt(receipt)" class="btn-view">View</button>
-          <button @click="downloadReceipt(receipt)" class="btn-download-small">
+          <button @click="viewReceipt(receipt)" class="btn-view">
+            <EyeIcon :size="16" /> View
+          </button>
+          <button
+            @click="downloadReceipt(receipt)"
+            class="btn-download-small"
+            :disabled="downloadingReceipt === receipt.receiptNumber"
+          >
             <DownloadIcon :size="16" />
           </button>
           <button @click="deleteReceipt(receipt.receiptNumber)" class="btn-delete">
@@ -38,124 +113,27 @@
         </div>
       </div>
     </div>
+
+    <!-- Hidden receipt templates for PDF generation (using reusable component) -->
+    <div class="hidden-receipts">
+      <div
+        v-for="receipt in receiptStore.receipts"
+        :id="`receipt-${receipt.receiptNumber}`"
+        :key="`pdf-${receipt.receiptNumber}`"
+      >
+        <ReceiptTemplate :receipt="receipt" />
+      </div>
+    </div>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from 'vue'
-import {
-  FileText as FileTextIcon,
-  Download as DownloadIcon,
-  Trash2 as Trash2Icon,
-} from 'lucide-vue-next'
-import { useReceiptStore } from '../stores/receiptStore'
-import jsPDF from 'jspdf'
-
-const receiptStore = useReceiptStore()
-const loading = ref(true)
-
-onMounted(async () => {
-  await receiptStore.loadReceipts()
-  loading.value = false
-})
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-NG', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-const formatCurrency = (amount) => {
-  return `₦${amount.toLocaleString('en-NG')}`
-}
-
-const viewReceipt = (receipt) => {
-  alert(`Viewing receipt: ${receipt.receiptNumber}`)
-}
-
-// ✅ Generate clean, “PAID” receipt PDF
-const downloadReceipt = (receipt) => {
-  const doc = new jsPDF({ unit: 'mm', format: 'a5' })
-
-  const logo = new Image()
-  logo.src = '/logo.png' // place in public/
-
-  logo.onload = () => {
-    // Header with logo + store info
-    doc.addImage(logo, 'PNG', 10, 10, 25, 25)
-    doc.setFontSize(15)
-    doc.text('CONPAY', 40, 18)
-    doc.setFontSize(9)
-    doc.text('Gadget Sales & Accessories', 40, 23)
-    doc.text('Email: conpay@gadgets.ng | +234 812 345 6789', 40, 28)
-    doc.line(10, 35, 140, 35)
-
-    // Receipt info
-    doc.setFontSize(12)
-    doc.text('RECEIPT', 10, 42)
-    doc.setFontSize(9)
-    doc.text(`Receipt #: ${receipt.receiptNumber}`, 10, 48)
-    doc.text(`Date: ${formatDate(receipt.date)}`, 10, 53)
-
-    // Customer info
-    doc.text(`Customer: ${receipt.customer.name}`, 10, 63)
-    if (receipt.customer.email) doc.text(`Email: ${receipt.customer.email}`, 10, 68)
-    if (receipt.customer.phone) doc.text(`Phone: ${receipt.customer.phone}`, 10, 73)
-
-    // Items
-    let y = 85
-    doc.setFontSize(10)
-    doc.text('Items', 10, y)
-    y += 5
-    receipt.items.forEach((item, i) => {
-      doc.text(`${i + 1}. ${item.name}`, 12, y)
-      doc.text(`x${item.quantity}`, 90, y)
-      doc.text(formatCurrency(item.price * item.quantity), 125, y, { align: 'right' })
-      y += 6
-    })
-
-    // Totals
-    y += 6
-    doc.line(10, y, 140, y)
-    y += 6
-    doc.text(`Subtotal: ${formatCurrency(receipt.subtotal)}`, 90, y)
-    y += 5
-    doc.text(`Tax: ${formatCurrency(receipt.tax)}`, 90, y)
-    y += 5
-    doc.setFont(undefined, 'bold')
-    doc.text(`Total: ${formatCurrency(receipt.total)}`, 90, y)
-    doc.setFont(undefined, 'normal')
-
-    // PAID watermark
-    doc.setTextColor(255, 0, 0)
-    doc.setFontSize(30)
-    doc.text('PAID', 75, 130, { align: 'center', angle: 25 })
-    doc.setTextColor(0, 0, 0)
-
-    // Footer
-    doc.setFontSize(8)
-    doc.text('Thank you for your purchase!', 75, 145, { align: 'center' })
-    doc.text('Generated by Conpay Receipt System', 75, 150, { align: 'center' })
-
-    doc.save(`${receipt.receiptNumber}.pdf`)
-  }
-}
-
-const deleteReceipt = async (receiptNumber) => {
-  if (confirm(`Are you sure you want to delete receipt ${receiptNumber}?`)) {
-    await receiptStore.deleteReceipt(receiptNumber)
-  }
-}
-</script>
 
 <style scoped>
 .receipt-list-container {
   margin-top: 3rem;
+  text-align: center;
 }
 
-.receipt-list-container h2 {
+h2 {
   font-size: 1.8rem;
   color: #1a202c;
   margin-bottom: 1.5rem;
@@ -178,14 +156,9 @@ const deleteReceipt = async (receiptNumber) => {
   margin-bottom: 1rem;
 }
 
-.empty-state p {
-  margin: 0.5rem 0;
-  font-size: 1.2rem;
-}
-
 .empty-subtext {
-  font-size: 1rem;
   color: #a0aec0;
+  font-size: 0.95rem;
 }
 
 .receipts-grid {
@@ -212,21 +185,15 @@ const deleteReceipt = async (receiptNumber) => {
 .receipt-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
   border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
 }
 
 .receipt-card-header h3 {
   color: #667eea;
+  font-size: 1rem;
   margin: 0;
-  font-size: 1.1rem;
-}
-
-.receipt-date {
-  color: #718096;
-  font-size: 0.9rem;
 }
 
 .receipt-card-body {
@@ -236,20 +203,17 @@ const deleteReceipt = async (receiptNumber) => {
 .customer-name {
   font-weight: 600;
   color: #1a202c;
-  margin: 0 0 0.5rem 0;
 }
 
 .receipt-total {
   font-size: 1.5rem;
   font-weight: 700;
   color: #667eea;
-  margin: 0.5rem 0;
 }
 
 .items-count {
   color: #718096;
   font-size: 0.9rem;
-  margin: 0;
 }
 
 .receipt-card-actions {
@@ -262,10 +226,13 @@ const deleteReceipt = async (receiptNumber) => {
   background: #667eea;
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .btn-view:hover {
@@ -279,13 +246,15 @@ const deleteReceipt = async (receiptNumber) => {
   padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.btn-download-small:hover {
+.btn-download-small:hover:not(:disabled) {
   background: #cbd5e0;
+}
+
+.btn-download-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-delete {
@@ -295,5 +264,13 @@ const deleteReceipt = async (receiptNumber) => {
 .btn-delete:hover {
   background: #fc8181;
   color: white;
+}
+
+/* Hidden receipts for PDF generation */
+.hidden-receipts {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 210mm;
 }
 </style>
