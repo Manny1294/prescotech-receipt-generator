@@ -1,3 +1,88 @@
+<script setup>
+import { ref, computed } from 'vue'
+import { Plus as PlusIcon, Trash2 as Trash2Icon } from 'lucide-vue-next'
+
+const props = defineProps({
+  receiptNumber: String,
+  initialData: Object,
+})
+
+const emit = defineEmits(['generate'])
+
+const formData = ref({
+  customerName: '',
+  customerEmail: '',
+  customerPhone: '',
+  customerAddress: '',
+  items: [{ name: '', quantity: 1, price: 0 }],
+  paymentMethod: '',
+  paymentStatus: 'Paid',
+})
+
+// Load initial data if editing
+if (props.initialData) {
+  // pre-filled data
+  formData.value = {
+    customerName: props.initialData.customer.name,
+    customerEmail: props.initialData.customer.email,
+    customerPhone: props.initialData.customer.phone,
+    customerAddress: props.initialData.customer.address,
+    items: props.initialData.items.map((item) => ({ ...item })),
+    paymentMethod: props.initialData.paymentMethod,
+    paymentStatus: props.initialData.paymentStatus,
+  }
+}
+
+const currentDate = computed(() => {
+  return new Date().toLocaleDateString('en-NG', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+})
+
+const addItem = () => {
+  formData.value.items.push({ name: '', quantity: 1, price: 0 })
+}
+
+const removeItem = (index) => {
+  if (formData.value.items.length > 1) {
+    formData.value.items.splice(index, 1)
+  }
+}
+
+const calculateSubtotal = () => {
+  return formData.value.items.reduce((sum, item) => {
+    return sum + item.quantity * item.price
+  }, 0)
+}
+
+const formatCurrency = (amount) => {
+  return `₦${amount.toLocaleString('en-NG')}`
+}
+
+const generateReceipt = () => {
+  const receipt = {
+    receiptNumber: props.receiptNumber,
+    date: new Date().toISOString(),
+    customer: {
+      name: formData.value.customerName,
+      email: formData.value.customerEmail,
+      phone: formData.value.customerPhone,
+      address: formData.value.customerAddress,
+    },
+    items: formData.value.items,
+    paymentMethod: formData.value.paymentMethod,
+    paymentStatus: formData.value.paymentStatus,
+    subtotal: calculateSubtotal(),
+    tax: 0,
+    total: calculateSubtotal(),
+  }
+
+  emit('generate', receipt)
+}
+</script>
+
 <template>
   <div class="form-container">
     <div class="receipt-header">
@@ -122,90 +207,6 @@
     </form>
   </div>
 </template>
-
-<script setup>
-import { ref, computed } from 'vue'
-import { Plus as PlusIcon, Trash2 as Trash2Icon } from 'lucide-vue-next'
-
-const props = defineProps({
-  receiptNumber: String,
-  initialData: Object,
-})
-
-const emit = defineEmits(['generate'])
-
-const formData = ref({
-  customerName: '',
-  customerEmail: '',
-  customerPhone: '',
-  customerAddress: '',
-  items: [{ name: '', quantity: 1, price: 0 }],
-  paymentMethod: '',
-  paymentStatus: 'Paid',
-})
-
-// Load initial data if editing
-if (props.initialData) {
-  formData.value = {
-    customerName: props.initialData.customer.name,
-    customerEmail: props.initialData.customer.email,
-    customerPhone: props.initialData.customer.phone,
-    customerAddress: props.initialData.customer.address,
-    items: props.initialData.items.map((item) => ({ ...item })),
-    paymentMethod: props.initialData.paymentMethod,
-    paymentStatus: props.initialData.paymentStatus,
-  }
-}
-
-const currentDate = computed(() => {
-  return new Date().toLocaleDateString('en-NG', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-})
-
-const addItem = () => {
-  formData.value.items.push({ name: '', quantity: 1, price: 0 })
-}
-
-const removeItem = (index) => {
-  if (formData.value.items.length > 1) {
-    formData.value.items.splice(index, 1)
-  }
-}
-
-const calculateSubtotal = () => {
-  return formData.value.items.reduce((sum, item) => {
-    return sum + item.quantity * item.price
-  }, 0)
-}
-
-const formatCurrency = (amount) => {
-  return `₦${amount.toLocaleString('en-NG')}`
-}
-
-const generateReceipt = () => {
-  const receipt = {
-    receiptNumber: props.receiptNumber,
-    date: new Date().toISOString(),
-    customer: {
-      name: formData.value.customerName,
-      email: formData.value.customerEmail,
-      phone: formData.value.customerPhone,
-      address: formData.value.customerAddress,
-    },
-    items: formData.value.items,
-    paymentMethod: formData.value.paymentMethod,
-    paymentStatus: formData.value.paymentStatus,
-    subtotal: calculateSubtotal(),
-    tax: 0,
-    total: calculateSubtotal(),
-  }
-
-  emit('generate', receipt)
-}
-</script>
 
 <style scoped>
 .form-container {
